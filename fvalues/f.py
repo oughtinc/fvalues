@@ -3,6 +3,7 @@ import inspect
 import warnings
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Any
 
 import executing
 
@@ -10,12 +11,15 @@ import executing
 @dataclass
 class FValue:
     source: str
-    value: object
+    value: Any
     formatted: str
 
 
+Parts = tuple[str | FValue, ...]
+
+
 class F(str):
-    def __new__(cls, s, parts=None):
+    def __new__(cls, s, parts: Parts = None):
         if parts is not None:
             expected = "".join(
                 part.formatted if isinstance(part, FValue) else part for part in parts
@@ -29,22 +33,22 @@ class F(str):
         ex = executing.Source.executing(frame)
         if ex.node is None:
             warnings.warn("Couldn't get source node of F() call")
-            return F(s, [s])
+            return F(s, (s,))
 
         assert isinstance(ex.node, ast.Call)
         [arg] = ex.node.args
         return F(s, F._parts_from_node(arg, frame, s))
 
     @staticmethod
-    def _parts_from_node(node: ast.expr, frame, value) -> list[str | FValue]:
+    def _parts_from_node(node: ast.expr, frame, value) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
-            return [node.value]
+            return (node.value,)
         if isinstance(node, ast.JoinedStr):
             parts = []
             for node in node.values:
                 parts.extend(F._parts_from_node(node, frame, None))
-            return parts
+            return tuple(parts)
         if isinstance(node, ast.FormattedValue):
             n: ast.expr = node.value
             source = ast.unparse(n)
@@ -55,17 +59,11 @@ class F(str):
             # TODO this evals the value again just for the sake of a formatted value
             code = compile(expr, "<ast>", "eval")  # noqa
             formatted = eval(code, frame.f_globals, frame.f_locals)
-            return [FValue(source, value, formatted)]
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-            left = F._parts_from_node(node.left, frame, value)
-            right = F._parts_from_node(node.right, frame, value)
-            return left + right
-        if isinstance(node, ast.AugAssign) and isinstance(node.op, ast.Add):
-            left = F._parts_from_node(node.target, frame, value)
-            right = F._parts_from_node(node.value, frame, value)
-            return left + right
+            f_value = FValue(source, value, formatted)
+            return (f_value,)
         assert isinstance(value, str)
-        return [FValue(ast.unparse(node), value, value)]
+        f_value = FValue(ast.unparse(node), value, value)
+        return (f_value,)
 
     def __deepcopy__(self, memodict=None):
         return F(str(self), deepcopy(self.parts, memodict))
@@ -82,18 +80,18 @@ class F(str):
                 parts.extend(part.flatten().parts)
             else:
                 parts.append(part)
-        return F(str(self), parts)
+        return F(str(self), tuple(parts))
 
-    def strip(self, *args):
+    def strip(self, *args) -> "F":
         return self.lstrip(*args).rstrip(*args)
 
-    def lstrip(self, *args):
+    def lstrip(self, *args) -> "F":
         return self._strip(0, "lstrip", *args)
 
-    def rstrip(self, *args):
+    def rstrip(self, *args) -> "F":
         return self._strip(-1, "rstrip", *args)
 
-    def _strip(self, index, method, *args):
+    def _strip(self, index: int, method: str, *args) -> "F":
         parts = list(self.parts)
         while True:
             part = parts[index]
@@ -112,10 +110,10 @@ class F(str):
             else:
                 del parts[index]
         s = getattr(super(), method)(*args)
-        return F(s, parts)
+        return F(s, tuple(parts))
 
     def _add(self, other, is_left: bool):
-        parts = [self, other] if is_left else [other, self]
+        parts = (self, other) if is_left else (other, self)
         value = str(parts[0]) + str(parts[1])
         frame = inspect.currentframe().f_back.f_back
         node = executing.Source.executing(frame).node
