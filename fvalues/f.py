@@ -68,9 +68,6 @@ class F(str):
     def __deepcopy__(self, memodict=None):
         return F(str(self), deepcopy(self.parts, memodict))
 
-    def dict(self):
-        return {"__fstring__": self.flatten().parts}
-
     def flatten(self):
         parts = []
         for part in self.parts:
