@@ -21,7 +21,9 @@ Parts = tuple[Part, ...]
 
 
 class F(str):
-    def __new__(cls, s: str, parts: Parts = None):
+    parts: Parts
+
+    def __new__(cls, s: str, parts: Parts | None = None):
         if parts is not None:
             expected = "".join(
                 part.formatted if isinstance(part, FValue) else part for part in parts
@@ -31,7 +33,7 @@ class F(str):
             result.parts = parts
             return result
 
-        frame = inspect.currentframe().f_back
+        frame = get_frame()
         ex = executing.Source.executing(frame)
         if ex.node is None:
             warnings.warn("Couldn't get source node of F() call")
@@ -113,16 +115,17 @@ class F(str):
         return F(s, tuple(parts))
 
     def _add(self, other, is_left: bool):
-        parts = (self, other) if is_left else (other, self)
+        parts: Parts = (self, other) if is_left else (other, self)
         value = str(parts[0]) + str(parts[1])
-        frame = inspect.currentframe().f_back.f_back
+        frame = get_frame().f_back
+        assert frame is not None
         node = executing.Source.executing(frame).node
         if isinstance(node, (ast.BinOp, ast.AugAssign)) and isinstance(
             node.op, ast.Add
         ):
             if isinstance(node, ast.AugAssign):
-                left_node = node.target
-                right_node = node.value
+                left_node = node.target  # type: ignore
+                right_node = node.value  # type: ignore
             else:
                 left_node = node.left
                 right_node = node.right
@@ -137,3 +140,7 @@ class F(str):
 
     def __radd__(self, other):
         return self._add(other, False)
+
+
+def get_frame() -> FrameType:
+    return inspect.currentframe().f_back.f_back  # type: ignore
