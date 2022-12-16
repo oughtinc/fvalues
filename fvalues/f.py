@@ -64,11 +64,20 @@ class F(str):
             source = ast.unparse(node.value)
             # TODO cache compiled code?
             value = eval(source, frame.f_globals, frame.f_locals)
-            expr = ast.Expression(ast.JoinedStr(values=[node]))
+            expr = ast.Expression(
+                ast.JoinedStr(
+                    values=[
+                        ast.FormattedValue(
+                            value=ast.Name(id="@fvalue", ctx=ast.Load()),
+                            conversion=node.conversion,
+                            format_spec=node.format_spec,
+                        )
+                    ]
+                )
+            )
             ast.fix_missing_locations(expr)  # noqa
-            # TODO this evals the value again just for the sake of a formatted value
             code = compile(expr, "<ast>", "eval")  # noqa
-            formatted = eval(code, frame.f_globals, frame.f_locals)
+            formatted = eval(code, frame.f_globals, frame.f_locals | {"@fvalue": value})
             f_value = FValue(source, value, formatted)
             return (f_value,)
         else:
