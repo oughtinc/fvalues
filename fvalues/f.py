@@ -45,8 +45,7 @@ class F(str):
             )
             return F(s, (s,))
 
-        if not isinstance(ex.node, ast.Call):
-            raise TypeError("F must be called directly, nothing fancy")
+        assert isinstance(ex.node, ast.Call)
         [arg] = ex.node.args
         return F(s, F._parts_from_node(arg, frame, s))
 
