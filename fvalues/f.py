@@ -42,16 +42,18 @@ class F(str):
         return F(s, F._parts_from_node(arg, frame, s))
 
     @staticmethod
-    def _parts_from_node(node: ast.expr, frame: FrameType, value) -> Parts:
+    def _parts_from_node(
+        node: ast.expr, frame: FrameType, value: str | FValue | None
+    ) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
             return (node.value,)
-        if isinstance(node, ast.JoinedStr):
+        elif isinstance(node, ast.JoinedStr):
             parts = []
             for node in node.values:
                 parts.extend(F._parts_from_node(node, frame, None))
             return tuple(parts)
-        if isinstance(node, ast.FormattedValue):
+        elif isinstance(node, ast.FormattedValue):
             n: ast.expr = node.value
             source = ast.unparse(n)
             # TODO cache compiled code?
@@ -63,9 +65,10 @@ class F(str):
             formatted = eval(code, frame.f_globals, frame.f_locals)
             f_value = FValue(source, value, formatted)
             return (f_value,)
-        assert isinstance(value, str)
-        f_value = FValue(ast.unparse(node), value, value)
-        return (f_value,)
+        else:
+            assert isinstance(value, str)
+            f_value = FValue(ast.unparse(node), value, value)
+            return (f_value,)
 
     def __deepcopy__(self, memodict=None):
         return F(str(self), deepcopy(self.parts, memodict))
