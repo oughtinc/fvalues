@@ -47,3 +47,39 @@ def test_add():
     )
     assert s.flatten().parts == ("hello ", "world", "!")
     assert s.parts[0].value.parts == parts
+
+
+def test_strip():
+    space = " "
+    s = F(f" {space} hello {space} ")
+    assert s == "   hello   "
+    assert s.parts == (
+        " ",
+        FValue(source="space", value=" ", formatted=" "),
+        " hello ",
+        FValue(source="space", value=" ", formatted=" "),
+        " ",
+    )
+    assert s.strip() == "hello"
+    assert s.strip(space) == "hello"
+    assert s.lstrip() == "hello   "
+    assert s.lstrip(space) == "hello   "
+    assert s.rstrip() == "   hello"
+    assert s.rstrip(space) == "   hello"
+    assert s.strip().parts == ("hello",)
+    assert s.lstrip().parts == (
+        "hello ",
+        FValue(source="space", value=" ", formatted=" "),
+        " ",
+    )
+    assert s.rstrip().parts == (
+        " ",
+        FValue(source="space", value=" ", formatted=" "),
+        " hello",
+    )
+    assert s.strip().strip("ho").strip() == "ell"
+
+    s = F(f"{' a'}b ")
+    assert s == " ab "
+    assert s.strip() == "ab"
+    assert s.strip().parts == (FValue(source="' a'", value=" a", formatted="a"), "b")
