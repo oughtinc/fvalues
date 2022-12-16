@@ -1,7 +1,10 @@
 from copy import deepcopy
 
+import pytest
+
 from fvalues import F
 from fvalues import FValue
+from fvalues import NoSourceAvailableWarning
 
 
 def test_f():
@@ -49,6 +52,34 @@ def test_add():
     )
     assert s.flatten().parts == ("hello ", "world", "!")
     assert s.parts[0].value.parts == parts
+
+
+def test_add_f():
+    f1 = F(f"hello {1 + 2}")
+    f2 = F(f"world {3 + 4}")
+    f3 = f1 + " " + f2
+    assert f3 == "hello 3 world 7"
+    assert f3.parts == (
+        FValue(source="f1 + ' '", value="hello 3 ", formatted="hello 3 "),
+        FValue(source="f2", value="world 7", formatted="world 7"),
+    )
+    assert f3.flatten().parts == (
+        "hello ",
+        FValue(source="1 + 2", value=3, formatted="3"),
+        " ",
+        "world ",
+        FValue(source="3 + 4", value=7, formatted="7"),
+    )
+
+
+def test_no_node():
+    # capture warning with pytest
+    with pytest.warns(
+        NoSourceAvailableWarning, match=r"Couldn't get source node of F\(\) call"
+    ):
+        s = eval('F(f"hello {1 + 2}")')
+    assert s == "hello 3"
+    assert s.parts == ("hello 3",)
 
 
 def test_strip():

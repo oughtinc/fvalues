@@ -1,4 +1,4 @@
-from .f import F, FValue
+from .f import F, FValue, NoSourceAvailableWarning
 
 try:
     from .version import __version__

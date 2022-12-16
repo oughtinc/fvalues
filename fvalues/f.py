@@ -20,6 +20,10 @@ Part = str | FValue
 Parts = tuple[Part, ...]
 
 
+class NoSourceAvailableWarning(Warning):
+    pass
+
+
 class F(str):
     parts: Parts
 
@@ -36,7 +40,9 @@ class F(str):
         frame = get_frame()
         ex = executing.Source.executing(frame)
         if ex.node is None:
-            warnings.warn("Couldn't get source node of F() call")
+            warnings.warn(
+                "Couldn't get source node of F() call", NoSourceAvailableWarning
+            )
             return F(s, (s,))
 
         if not isinstance(ex.node, ast.Call):
