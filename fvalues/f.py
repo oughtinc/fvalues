@@ -1,6 +1,7 @@
 import ast
 import inspect
 import warnings
+
 from copy import deepcopy
 from dataclasses import dataclass
 from types import FrameType
@@ -137,8 +138,8 @@ class F(str):
             node.op, ast.Add
         ):
             if isinstance(node, ast.AugAssign):
-                left_node = node.target  # type: ignore
-                right_node = node.value  # type: ignore
+                left_node = node.target
+                right_node = node.value
             else:
                 left_node = node.left
                 right_node = node.right
