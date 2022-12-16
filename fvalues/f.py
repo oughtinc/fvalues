@@ -16,7 +16,8 @@ class FValue:
     formatted: str
 
 
-Parts = tuple[str | FValue, ...]
+Part = str | FValue
+Parts = tuple[Part, ...]
 
 
 class F(str):
@@ -42,20 +43,17 @@ class F(str):
         return F(s, F._parts_from_node(arg, frame, s))
 
     @staticmethod
-    def _parts_from_node(
-        node: ast.expr, frame: FrameType, value: str | FValue | None
-    ) -> Parts:
+    def _parts_from_node(node: ast.expr, frame: FrameType, value: Part | None) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
             return (node.value,)
         elif isinstance(node, ast.JoinedStr):
-            parts = []
+            parts: list[Part] = []
             for node in node.values:
                 parts.extend(F._parts_from_node(node, frame, None))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
-            n: ast.expr = node.value
-            source = ast.unparse(n)
+            source = ast.unparse(node.value)
             # TODO cache compiled code?
             value = eval(source, frame.f_globals, frame.f_locals)
             expr = ast.Expression(ast.JoinedStr(values=[node]))
@@ -73,8 +71,8 @@ class F(str):
     def __deepcopy__(self, memodict=None):
         return F(str(self), deepcopy(self.parts, memodict))
 
-    def flatten(self):
-        parts = []
+    def flatten(self) -> "F":
+        parts: list[Part] = []
         for part in self.parts:
             if isinstance(part, FValue) and isinstance(part.value, F):
                 parts.extend(part.value.flatten().parts)
