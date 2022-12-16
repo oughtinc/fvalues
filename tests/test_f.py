@@ -154,3 +154,16 @@ def test_caching():
         assert s == "hello 3"
     end = time.time()
     assert end - start < 1
+
+
+def test_get_source_segment():
+    s1 = F(f"hello {(1) + 2}")
+    s2 = F(f"hello {1 + (2)}")
+    assert s1.parts == (
+        "hello ",
+        FValue(source="(1) + 2", value=3, formatted="3"),
+    )
+    assert s2.parts == (
+        "hello ",
+        FValue(source="1 + (2)", value=3, formatted="3"),
+    )

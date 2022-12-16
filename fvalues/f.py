@@ -50,20 +50,25 @@ class F(str):
 
         assert isinstance(ex.node, ast.Call)
         [arg] = ex.node.args
-        return F(s, F._parts_from_node(arg, frame, s))
+        return F(s, F._parts_from_node(arg, frame, s, ex.source))
 
     @staticmethod
-    def _parts_from_node(node: ast.expr, frame: FrameType, value: Part | None) -> Parts:
+    def _parts_from_node(
+        node: ast.expr,
+        frame: FrameType,
+        value: Part | None,
+        source: executing.Source,
+    ) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
             return (node.value,)
         elif isinstance(node, ast.JoinedStr):
             parts: list[Part] = []
             for node in node.values:
-                parts.extend(F._parts_from_node(node, frame, None))
+                parts.extend(F._parts_from_node(node, frame, None, source))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
-            source, value_code, formatted_code = compile_formatted_value(node)
+            source, value_code, formatted_code = compile_formatted_value(node, source)
             value = eval(value_code, frame.f_globals, frame.f_locals)
             formatted = eval(
                 formatted_code, frame.f_globals, frame.f_locals | {"@fvalue": value}
@@ -142,8 +147,8 @@ class F(str):
             else:
                 left_node = node.left
                 right_node = node.right
-            left_parts = F._parts_from_node(left_node, frame, parts[0])
-            right_parts = F._parts_from_node(right_node, frame, parts[1])
+            left_parts = F._parts_from_node(left_node, frame, parts[0], ex.source)
+            right_parts = F._parts_from_node(right_node, frame, parts[1], ex.source)
             parts = left_parts + right_parts
 
         return F(value, parts)
@@ -159,9 +164,23 @@ def get_frame() -> FrameType:
     return inspect.currentframe().f_back.f_back  # type: ignore
 
 
+# noinspection PyTypeChecker
+# (PyCharm being weird with AST)
 @lru_cache
-def compile_formatted_value(node: ast.FormattedValue) -> tuple[str, CodeType, CodeType]:
-    source = ast.unparse(node.value)  # noqa
+def compile_formatted_value(
+    node: ast.FormattedValue, ex_source: executing.Source
+) -> tuple[str, CodeType, CodeType]:
+    source_unparsed = ast.unparse(node.value)
+    source_segment = ast.get_source_segment(ex_source.text, node.value) or ""
+    try:
+        source_segment_unparsed = ast.unparse(ast.parse(source_segment, mode="eval"))
+    except Exception:  # pragma: no cover  # TODO test a wonky f-string case
+        source_segment_unparsed = ""
+    source = (
+        source_segment
+        if source_unparsed == source_segment_unparsed
+        else source_unparsed
+    )
     value_code = compile(source, "<fvalue1>", "eval")
     expr = ast.Expression(
         ast.JoinedStr(
@@ -174,6 +193,6 @@ def compile_formatted_value(node: ast.FormattedValue) -> tuple[str, CodeType, Co
             ]
         )
     )
-    ast.fix_missing_locations(expr)  # noqa
-    formatted_code = compile(expr, "<fvalue2>", "eval")  # noqa
+    ast.fix_missing_locations(expr)
+    formatted_code = compile(expr, "<fvalue2>", "eval")
     return source, value_code, formatted_code
