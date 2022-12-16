@@ -81,6 +81,13 @@ def test_no_node():
     assert s == "hello 3"
     assert s.parts == ("hello 3",)
 
+    s2 = F(f"{s}!")
+    s3 = eval("s + s2")
+    assert s3 == "hello 3hello 3!"
+    assert s3.parts == (s, s2)
+    assert s3.flatten().parts == ("hello 3", "hello 3", "!")
+    assert s3.parts[0].parts == s.parts
+
 
 def test_strip():
     space = " "
