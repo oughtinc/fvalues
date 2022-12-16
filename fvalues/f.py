@@ -4,6 +4,8 @@ import warnings
 
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import lru_cache
+from types import CodeType
 from types import FrameType
 from typing import Any
 
@@ -61,23 +63,11 @@ class F(str):
                 parts.extend(F._parts_from_node(node, frame, None))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
-            source = ast.unparse(node.value)
-            # TODO cache compiled code?
-            value = eval(source, frame.f_globals, frame.f_locals)
-            expr = ast.Expression(
-                ast.JoinedStr(
-                    values=[
-                        ast.FormattedValue(
-                            value=ast.Name(id="@fvalue", ctx=ast.Load()),
-                            conversion=node.conversion,
-                            format_spec=node.format_spec,
-                        )
-                    ]
-                )
+            source, value_code, formatted_code = compile_formatted_value(node)
+            value = eval(value_code, frame.f_globals, frame.f_locals)
+            formatted = eval(
+                formatted_code, frame.f_globals, frame.f_locals | {"@fvalue": value}
             )
-            ast.fix_missing_locations(expr)  # noqa
-            code = compile(expr, "<ast>", "eval")  # noqa
-            formatted = eval(code, frame.f_globals, frame.f_locals | {"@fvalue": value})
             f_value = FValue(source, value, formatted)
             return (f_value,)
         else:
@@ -167,3 +157,23 @@ class F(str):
 
 def get_frame() -> FrameType:
     return inspect.currentframe().f_back.f_back  # type: ignore
+
+
+@lru_cache
+def compile_formatted_value(node: ast.FormattedValue) -> tuple[str, CodeType, CodeType]:
+    source = ast.unparse(node.value)  # noqa
+    value_code = compile(source, "<fvalue1>", "eval")
+    expr = ast.Expression(
+        ast.JoinedStr(
+            values=[
+                ast.FormattedValue(
+                    value=ast.Name(id="@fvalue", ctx=ast.Load()),
+                    conversion=node.conversion,
+                    format_spec=node.format_spec,
+                )
+            ]
+        )
+    )
+    ast.fix_missing_locations(expr)  # noqa
+    formatted_code = compile(expr, "<fvalue2>", "eval")  # noqa
+    return source, value_code, formatted_code

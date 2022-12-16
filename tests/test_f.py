@@ -1,3 +1,5 @@
+import time
+
 from copy import deepcopy
 
 import pytest
@@ -143,3 +145,12 @@ def check_deepcopy(s: F):
         assert p1 == p2
         if not isinstance(p1, str):
             assert p1 is not p2
+
+
+def test_caching():
+    start = time.time()
+    for _ in range(30000):
+        s = F(f"hello {1 + 2}")
+        assert s == "hello 3"
+    end = time.time()
+    assert end - start < 1
