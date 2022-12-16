@@ -20,7 +20,22 @@ jobs:
       - name: Install
         run: |
           pip install -U pip
-          pip install .[dev]
+          pip install .[dev] coveralls
 
       - name: Run all tests
-        run: pytest --cov . -x
+        run: |
+          coverage run --source fvalues -m pytest
+          coverage report -m
+      - name: Coveralls Python
+        uses: AndreMiras/coveralls-python-action@v20201129
+        with:
+          parallel: true
+          flag-name: test-${{ matrix.python-version }}
+  coveralls_finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: AndreMiras/coveralls-python-action@v20201129
+        with:
+          parallel-finished: true
