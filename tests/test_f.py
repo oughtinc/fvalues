@@ -31,6 +31,7 @@ def test_add():
         "world",
     )
     assert s.parts[0].value.parts == ("hello ",)
+
     s = "hello " + F("world")
     assert s == "hello world"
     parts = (
@@ -40,6 +41,9 @@ def test_add():
     assert s.parts == parts
     s += "!"
     assert s == "hello world!"
-    assert s.parts == ("hello world", "!")
+    assert s.parts == (
+        FValue(source="s", value="hello world", formatted="hello world"),
+        "!",
+    )
     assert s.flatten().parts == ("hello ", "world", "!")
-    assert s.parts[0].parts == parts
+    assert s.parts[0].value.parts == parts

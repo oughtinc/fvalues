@@ -119,7 +119,15 @@ class F(str):
         value = str(parts[0]) + str(parts[1])
         frame = get_frame().f_back
         assert frame is not None
-        node = executing.Source.executing(frame).node
+        ex = executing.Source.executing(frame)
+        if (
+            ex.node is None
+            and len(ex.statements) == 1
+            and isinstance(stmt := list(ex.statements)[0], ast.AugAssign)
+        ):
+            node = stmt
+        else:
+            node = ex.node
         if isinstance(node, (ast.BinOp, ast.AugAssign)) and isinstance(
             node.op, ast.Add
         ):
