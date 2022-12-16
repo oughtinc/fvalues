@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from fvalues import F
 from fvalues import FValue
 
@@ -83,3 +85,23 @@ def test_strip():
     assert s == " ab "
     assert s.strip() == "ab"
     assert s.strip().parts == (FValue(source="' a'", value=" a", formatted="a"), "b")
+
+
+def test_deepcopy():
+    name = "world"
+    s = F(f"hello {name}")
+    check_deepcopy(s)
+    s = F(f"{s}!")
+    assert s == "hello world!"
+    check_deepcopy(s)
+
+
+def check_deepcopy(s: F):
+    s2 = deepcopy(s)
+    assert s == s2
+    assert s is not s2
+    assert s.parts == s2.parts
+    for p1, p2 in zip(s.parts, s2.parts):
+        assert p1 == p2
+        if not isinstance(p1, str):
+            assert p1 is not p2
