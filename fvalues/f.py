@@ -3,6 +3,7 @@ import inspect
 import warnings
 from copy import deepcopy
 from dataclasses import dataclass
+from types import FrameType
 from typing import Any
 
 import executing
@@ -19,7 +20,7 @@ Parts = tuple[str | FValue, ...]
 
 
 class F(str):
-    def __new__(cls, s, parts: Parts = None):
+    def __new__(cls, s: str, parts: Parts = None):
         if parts is not None:
             expected = "".join(
                 part.formatted if isinstance(part, FValue) else part for part in parts
@@ -35,12 +36,13 @@ class F(str):
             warnings.warn("Couldn't get source node of F() call")
             return F(s, (s,))
 
-        assert isinstance(ex.node, ast.Call)
+        if not isinstance(ex.node, ast.Call):
+            raise TypeError("F must be called directly, nothing fancy")
         [arg] = ex.node.args
         return F(s, F._parts_from_node(arg, frame, s))
 
     @staticmethod
-    def _parts_from_node(node: ast.expr, frame, value) -> Parts:
+    def _parts_from_node(node: ast.expr, frame: FrameType, value) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
             return (node.value,)
