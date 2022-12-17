@@ -8,6 +8,8 @@ from functools import lru_cache
 from types import CodeType
 from types import FrameType
 from typing import Any
+from typing import Optional
+from typing import Union
 
 import executing
 
@@ -19,7 +21,7 @@ class FValue:
     formatted: str
 
 
-Part = str | FValue
+Part = Union[str, FValue]
 Parts = tuple[Part, ...]
 
 
@@ -30,7 +32,7 @@ class NoSourceAvailableWarning(Warning):
 class F(str):
     parts: Parts
 
-    def __new__(cls, s: str, parts: Parts | None = None):
+    def __new__(cls, s: str, parts: Optional[Parts] = None):
         if parts is not None:
             expected = "".join(
                 part.formatted if isinstance(part, FValue) else part for part in parts
@@ -56,7 +58,7 @@ class F(str):
     def _parts_from_node(
         node: ast.expr,
         frame: FrameType,
-        value: Part | None,
+        value: Optional[Part],
         ex_source: executing.Source,
     ) -> Parts:
         if isinstance(node, ast.Constant):
