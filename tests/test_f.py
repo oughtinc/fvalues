@@ -126,6 +126,8 @@ def test_strip():
     assert s.strip() == "ab"
     assert s.strip().parts == (FValue(source="' a'", value=" a", formatted="a"), "b")
 
+
+def test_strip_empty():
     for s in [
         F(""),
         F(" "),
