@@ -118,7 +118,10 @@ class F(str):
             s = getattr(s, method)(*args)
             if s:
                 if isinstance(part, FValue):
-                    part = FValue(part.source, part.value, s)
+                    value = part.value
+                    if isinstance(part.value, str):
+                        value = getattr(value, method)(*args)
+                    part = FValue(part.source, value, s)
                 else:
                     part = s
                 parts[index] = part

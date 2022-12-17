@@ -124,7 +124,7 @@ def test_strip():
     s = F(f"{' a'}b ")
     assert s == " ab "
     assert s.strip() == "ab"
-    assert s.strip().parts == (FValue(source="' a'", value=" a", formatted="a"), "b")
+    assert s.strip().parts == (FValue(source="' a'", value="a", formatted="a"), "b")
 
 
 def test_strip_empty():
@@ -141,6 +141,27 @@ def test_strip_empty():
         assert s.strip() == s.strip().strip() == s.lstrip() == s.rstrip() == ""
         assert not s.strip()
         assert len(s.strip()) == 0
+
+
+def test_strip_flatten():
+    s = F(f" a {1}")
+    assert s == " a 1"
+    one_fval = FValue(source="1", value=1, formatted="1")
+    assert s.parts == (" a ", one_fval)
+
+    assert s.strip() == "a 1"
+    assert s.strip().parts == ("a ", one_fval)
+
+    s += "!"
+    assert s == " a 1!"
+    s_fval = FValue(source="s", value=" a 1", formatted=" a 1")
+    assert s.parts == (s_fval, "!")
+    assert s.flatten().parts == (" a ", one_fval, "!")
+
+    s = s.strip()
+    assert s == "a 1!"
+    assert s.parts == (FValue(source="s", value="a 1", formatted="a 1"), "!")
+    assert s.flatten().parts == ("a ", one_fval, "!")
 
 
 def test_deepcopy():
