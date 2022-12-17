@@ -57,7 +57,7 @@ class F(str):
         node: ast.expr,
         frame: FrameType,
         value: Part | None,
-        source: executing.Source,
+        ex_source: executing.Source,
     ) -> Parts:
         if isinstance(node, ast.Constant):
             assert isinstance(node.value, str)
@@ -65,10 +65,12 @@ class F(str):
         elif isinstance(node, ast.JoinedStr):
             parts: list[Part] = []
             for node in node.values:
-                parts.extend(F._parts_from_node(node, frame, None, source))
+                parts.extend(F._parts_from_node(node, frame, None, ex_source))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
-            source, value_code, formatted_code = compile_formatted_value(node, source)
+            source, value_code, formatted_code = compile_formatted_value(
+                node, ex_source
+            )
             value = eval(value_code, frame.f_globals, frame.f_locals)
             formatted = eval(
                 formatted_code, frame.f_globals, frame.f_locals | {"@fvalue": value}
@@ -77,7 +79,7 @@ class F(str):
             return (f_value,)
         else:
             assert isinstance(value, str)
-            f_value = FValue(ast.unparse(node), value, value)
+            f_value = FValue(get_node_source_text(node, ex_source), value, value)
             return (f_value,)
 
     def __deepcopy__(self, memodict=None):
@@ -170,17 +172,7 @@ def get_frame() -> FrameType:
 def compile_formatted_value(
     node: ast.FormattedValue, ex_source: executing.Source
 ) -> tuple[str, CodeType, CodeType]:
-    source_unparsed = ast.unparse(node.value)
-    source_segment = ast.get_source_segment(ex_source.text, node.value) or ""
-    try:
-        source_segment_unparsed = ast.unparse(ast.parse(source_segment, mode="eval"))
-    except Exception:  # pragma: no cover  # TODO test a wonky f-string case
-        source_segment_unparsed = ""
-    source = (
-        source_segment
-        if source_unparsed == source_segment_unparsed
-        else source_unparsed
-    )
+    source = get_node_source_text(node.value, ex_source)
     value_code = compile(source, "<fvalue1>", "eval")
     expr = ast.Expression(
         ast.JoinedStr(
@@ -196,3 +188,18 @@ def compile_formatted_value(
     ast.fix_missing_locations(expr)
     formatted_code = compile(expr, "<fvalue2>", "eval")
     return source, value_code, formatted_code
+
+
+@lru_cache
+def get_node_source_text(node: ast.AST, ex_source: executing.Source):
+    source_unparsed = ast.unparse(node)
+    source_segment = ast.get_source_segment(ex_source.text, node) or ""
+    try:
+        source_segment_unparsed = ast.unparse(ast.parse(source_segment, mode="eval"))
+    except Exception:  # pragma: no cover  # TODO test a wonky f-string case
+        source_segment_unparsed = ""
+    return (
+        source_segment
+        if source_unparsed == source_segment_unparsed
+        else source_unparsed
+    )

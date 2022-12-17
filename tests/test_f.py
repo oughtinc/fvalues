@@ -31,7 +31,7 @@ def test_add():
     assert s == "hello world"
     assert s.parts == (
         FValue(
-            source="F('hello ')",
+            source='F("hello ")',
             value="hello ",
             formatted="hello ",
         ),
@@ -43,7 +43,7 @@ def test_add():
     assert s == "hello world"
     parts = (
         "hello ",
-        FValue(source="F('world')", value="world", formatted="world"),
+        FValue(source='F("world")', value="world", formatted="world"),
     )
     assert s.parts == parts
     s += "!"
@@ -62,7 +62,7 @@ def test_add_f():
     f3 = f1 + " " + f2
     assert f3 == "hello 3 world 7"
     assert f3.parts == (
-        FValue(source="f1 + ' '", value="hello 3 ", formatted="hello 3 "),
+        FValue(source='f1 + " "', value="hello 3 ", formatted="hello 3 "),
         FValue(source="f2", value="world 7", formatted="world 7"),
     )
     assert f3.flatten().parts == (
