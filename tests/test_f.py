@@ -126,6 +126,20 @@ def test_strip():
     assert s.strip() == "ab"
     assert s.strip().parts == (FValue(source="' a'", value=" a", formatted="a"), "b")
 
+    for s in [
+        F(""),
+        F(" "),
+        F(f""),  # noqa
+        F(f" "),  # noqa
+        F(f"{''}"),
+        F(f"{' '}"),
+        F(f" {''} "),
+        F(f" {' '} "),
+    ]:
+        assert s.strip() == s.strip().strip() == s.lstrip() == s.rstrip() == ""
+        assert not s.strip()
+        assert len(s.strip()) == 0
+
 
 def test_deepcopy():
     name = "world"

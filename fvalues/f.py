@@ -109,7 +109,7 @@ class F(str):
 
     def _strip(self, index: int, method: str, *args) -> "F":
         parts = list(self.parts)
-        while True:
+        while parts:
             part = parts[index]
             if isinstance(part, FValue):
                 s = part.formatted
