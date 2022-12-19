@@ -39,6 +39,12 @@ class FValue:
     # then `value == formatted`.
     formatted: str
 
+    def __str__(self) -> str:
+        """
+        This means that `str(part)` is what you'd expect for both part types.
+        """
+        return self.formatted
+
 
 Part = Union[str, FValue]
 Parts = tuple[Part, ...]  # type of F.parts
@@ -66,9 +72,7 @@ class F(str):
             # No magic when parts are provided.
 
             # Sanity check that the parts add up correctly.
-            expected = "".join(
-                part.formatted if isinstance(part, FValue) else part for part in parts
-            )
+            expected = "".join(map(str, parts))
             assert s == expected, f"{s!r} != {expected!r}"
 
             result = super().__new__(cls, s)
@@ -187,11 +191,7 @@ class F(str):
         parts = list(self.parts)
         while parts:
             part = parts[index]
-            if isinstance(part, FValue):
-                s = part.formatted
-            else:
-                s = part
-            s = getattr(s, method)(*args)
+            s = getattr(str(part), method)(*args)
 
             if not s:
                 del parts[index]
