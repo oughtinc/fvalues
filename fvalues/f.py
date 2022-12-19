@@ -25,7 +25,10 @@ class FValue:
     # Python source code of the expression.
     # Doesn't include the format spec or conversion specifier in f-strings,
     # e.g. in `{foo()!r:.2f}` it's just the `foo()`.
-    # In rare cases this may
+    # In rare cases this may not be the original source code,
+    # but rather equivalent code produced by `ast.unparse()`.
+    # This is needed due to Python bugs in slightly older versions
+    # involving the locations of nodes within f-strings.
     source: str
 
     # Original (possibly non-str) value of the expression before formatting.
@@ -147,6 +150,7 @@ class F(str):
             if isinstance(part, FValue) and isinstance(part.value, F):
                 parts.extend(part.value.flatten().parts)
             elif isinstance(part, F):
+                # Happens with concatenation when the source node can't be found.
                 parts.extend(part.flatten().parts)
             else:
                 parts.append(part)
