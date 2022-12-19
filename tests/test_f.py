@@ -9,7 +9,7 @@ from fvalues import FValue
 from fvalues import NoSourceAvailableWarning
 
 
-def test_f():
+def test_formatting():
     numbers = [1.23456789, 2, 3]
     ndigits = 2
     s = F(
@@ -46,6 +46,7 @@ def test_add():
         FValue(source='F("world")', value="world", formatted="world"),
     )
     assert s.parts == parts
+
     s += "!"
     assert s == "hello world!"
     assert s.parts == (
@@ -75,10 +76,10 @@ def test_add_f():
 
 
 def test_no_node():
-    # capture warning with pytest
     with pytest.warns(
         NoSourceAvailableWarning, match=r"Couldn't get source node of F\(\) call"
     ):
+        # exec/eval don't make source code accessible at all in general.
         s = eval('F(f"hello {1 + 2}")')
     assert s == "hello 3"
     assert s.parts == ("hello 3",)
@@ -187,6 +188,7 @@ def check_deepcopy(s: F):
 
 
 def test_caching():
+    # Check that many calls are fast thanks to cached compiling.
     start = time.time()
     for _ in range(30000):
         s = F(f"hello {1 + 2}")
@@ -196,6 +198,7 @@ def test_caching():
 
 
 def test_get_source_segment():
+    # Check that original source code is typically used.
     s1 = F(f"hello {(1) + 2}")
     s2 = F(f"hello {1 + (2)}")
     assert s1.parts == (
@@ -216,6 +219,8 @@ def test_bad_source_segment():
     ).strip()
     [part] = s.parts
     assert isinstance(part, FValue)
+    # Depending on Python version, ast.get_source_segment may be wrong,
+    # fallback to ast.unparse instead.
     assert part.source in ("1 + (2)", "1 + 2")
     assert part.value == 3
     assert part.formatted == "3"
