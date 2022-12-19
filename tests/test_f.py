@@ -37,7 +37,7 @@ def test_add():
         ),
         "world",
     )
-    assert s.parts[0].value.parts == ("hello ",)
+    assert s.parts[0].value.parts == ("hello ",)  # type: ignore
 
     s = "hello " + F("world")
     assert s == "hello world"
@@ -53,7 +53,7 @@ def test_add():
         "!",
     )
     assert s.flatten().parts == ("hello ", "world", "!")
-    assert s.parts[0].value.parts == parts
+    assert s.parts[0].value.parts == parts  # type: ignore
 
 
 def test_add_f():
@@ -87,8 +87,10 @@ def test_no_node():
     s3 = eval("s + s2")
     assert s3 == "hello 3hello 3!"
     assert s3.parts == (s, s2)
+    # Assert that these are the same actual F strings, not plain strings
+    assert s3.parts[0] is s
+    assert s3.parts[1] is s2
     assert s3.flatten().parts == ("hello 3", "hello 3", "!")
-    assert s3.parts[0].parts == s.parts
 
 
 def test_strip():

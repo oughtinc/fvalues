@@ -88,8 +88,13 @@ class F(str):
     def _parts_from_node(
         node: ast.expr,
         ex: executing.Executing,
-        value: Optional[Part],
+        value: Optional[str],
     ) -> Parts:
+        """
+        Extract one or more parts (strings or FValues) corresponding to the AST node.
+        `node` should a descendant of `ex.node`.
+        `value` should be the actual runtime value associated with the node if known.
+        """
         if isinstance(node, ast.Constant):
             # Simple literal string part.
             # Could be a string literal in a concatenation,
@@ -99,6 +104,8 @@ class F(str):
         elif isinstance(node, ast.JoinedStr):  # f-string
             parts: list[Part] = []
             for node in node.values:  # ast.Constant or ast.FormattedValue
+                # The values of these nodes are not known,
+                # but don't need to be given here.
                 parts.extend(F._parts_from_node(node, ex, None))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
@@ -113,14 +120,28 @@ class F(str):
             f_value = FValue(source, value, formatted)
             return (f_value,)
         else:
+            # Part of a concatenation.
+            assert isinstance(node.parent, (ast.BinOp, ast.AugAssign))  # type: ignore
             assert isinstance(value, str)
             f_value = FValue(get_node_source_text(node, ex.source), value, value)
             return (f_value,)
 
-    def __deepcopy__(self, memodict=None):
+    def __deepcopy__(self, memodict=None) -> "F":
         return F(str(self), deepcopy(self.parts, memodict))
 
     def flatten(self) -> "F":
+        """
+        Return an equivalent F string with any nested F strings
+        (typically within an FValue part)
+        expanded out into their constituent parts at the top level of `.parts`.
+        Such nesting occurs when an F string is constructed over multiple
+        formatting/concatenation steps.
+        Flattening lets you work with the parts more simply when the exact origin
+        of each part isn't that important.
+        A downside is that you're more likely to end up with multiple FValues
+        with the same `.source` but different values as they were evaluated
+        at different times, even for pure expressions like variable names.
+        """
         parts: list[Part] = []
         for part in self.parts:
             if isinstance(part, FValue) and isinstance(part.value, F):
@@ -164,12 +185,13 @@ class F(str):
         s = getattr(super(), method)(*args)
         return F(s, tuple(parts))
 
-    def _add(self, other, is_left: bool):
-        parts: Parts = (self, other) if is_left else (other, self)
-        value = str(parts[0]) + str(parts[1])
+    def _add(self, other: str, is_left: bool) -> "F":
+        left, right = (self, other) if is_left else (other, self)
+        value = str(left) + str(right)
         frame = get_frame().f_back
         assert frame is not None
         ex = executing.Source.executing(frame)
+
         if (
             ex.node is None
             and len(ex.statements) == 1
@@ -178,6 +200,7 @@ class F(str):
             node = stmt
         else:
             node = ex.node
+
         if isinstance(node, (ast.BinOp, ast.AugAssign)) and isinstance(
             node.op, ast.Add
         ):
@@ -187,16 +210,18 @@ class F(str):
             else:
                 left_node = node.left
                 right_node = node.right
-            left_parts = F._parts_from_node(left_node, ex, parts[0])
-            right_parts = F._parts_from_node(right_node, ex, parts[1])
+            left_parts = F._parts_from_node(left_node, ex, left)
+            right_parts = F._parts_from_node(right_node, ex, right)
             parts = left_parts + right_parts
+        else:
+            parts = left, right
 
         return F(value, parts)
 
-    def __add__(self, other):
+    def __add__(self, other: str) -> "F":
         return self._add(other, True)
 
-    def __radd__(self, other):
+    def __radd__(self, other: str) -> "F":
         return self._add(other, False)
 
 
