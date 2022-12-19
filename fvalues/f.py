@@ -16,17 +16,43 @@ import executing
 
 @dataclass
 class FValue:
+    """
+    A non-constant part of an F string, corresponding to either
+    an expression inside braces (`{}`) in an f-string, or
+    a non-literal string in a concatenation (`+` or `+=`).
+    """
+
+    # Python source code of the expression.
+    # Doesn't include the format spec or conversion specifier in f-strings,
+    # e.g. in `{foo()!r:.2f}` it's just the `foo()`.
+    # In rare cases this may
     source: str
+
+    # Original (possibly non-str) value of the expression before formatting.
     value: Any
+
+    # Final formatted string interpolated into the larger string.
+    # If `value` is already a string and there isn't any formatting/conversion
+    # then `value == formatted`.
     formatted: str
 
 
 Part = Union[str, FValue]
-Parts = tuple[Part, ...]
+Parts = tuple[Part, ...]  # type of F.parts
 
 
 class NoSourceAvailableWarning(Warning):
-    pass
+    """
+    Indicates that the source code corresponding to an F() call couldn't be found.
+    This typically means that no source code file for any of the executed code
+    was available, e.g. if the code was executed in the standard shell/REPL
+    or with `exec()` or `eval()`.
+    In rare cases it may be caused by a limitation with `executing`
+    finding the correct expression within the available source code,
+    e.g. inside an `assert` statement when using `pytest` which has its own magic.
+    Either way, the resulting F object will simply fall back to a single string
+    part, i.e. no FValues.
+    """
 
 
 class F(str):
@@ -34,15 +60,19 @@ class F(str):
 
     def __new__(cls, s: str, parts: Optional[Parts] = None):
         if parts is not None:
+            # No magic when parts are provided.
+
+            # Sanity check that the parts add up correctly.
             expected = "".join(
                 part.formatted if isinstance(part, FValue) else part for part in parts
             )
             assert s == expected, f"{s!r} != {expected!r}"
+
             result = super().__new__(cls, s)
             result.parts = parts
             return result
 
-        frame = get_frame()
+        frame = get_frame()  # frame where F() was called
         ex = executing.Source.executing(frame)
         if ex.node is None:
             warnings.warn(
@@ -62,11 +92,14 @@ class F(str):
         ex_source: executing.Source,
     ) -> Parts:
         if isinstance(node, ast.Constant):
+            # Simple literal string part.
+            # Could be a string literal in a concatenation,
+            # or one of JoinedStr (f-string) values that isn't a FormattedValue.
             assert isinstance(node.value, str)
             return (node.value,)
-        elif isinstance(node, ast.JoinedStr):
+        elif isinstance(node, ast.JoinedStr):  # f-string
             parts: list[Part] = []
-            for node in node.values:
+            for node in node.values:  # ast.Constant or ast.FormattedValue
                 parts.extend(F._parts_from_node(node, frame, None, ex_source))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
