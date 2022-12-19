@@ -157,15 +157,33 @@ class F(str):
         return F(str(self), tuple(parts))
 
     def strip(self, *args) -> "F":
+        """
+        Similar to the usual `str.strip()`, but also correspondingly strips
+        the contents of `.parts`.
+        In FValues, `.formatted` is stripped, as well as `.value` if and only
+        if it's a string.
+        Empty parts are removed.
+        """
         return self.lstrip(*args).rstrip(*args)
 
     def lstrip(self, *args) -> "F":
+        """
+        Like strip() but only on the left.
+        """
         return self._strip(0, "lstrip", *args)
 
     def rstrip(self, *args) -> "F":
+        """
+        Like strip() but only on the right.
+        """
         return self._strip(-1, "rstrip", *args)
 
     def _strip(self, index: int, method: str, *args) -> "F":
+        """
+        Apply `method` to the whole string and to the part at `index`.
+        Also apply to `.formatted` and maybe `.value` in FValues.
+        If the remaining part is empty, remove it and repeat.
+        """
         parts = list(self.parts)
         while parts:
             part = parts[index]
@@ -174,18 +192,23 @@ class F(str):
             else:
                 s = part
             s = getattr(s, method)(*args)
-            if s:
-                if isinstance(part, FValue):
-                    value = part.value
-                    if isinstance(part.value, str):
-                        value = getattr(value, method)(*args)
-                    part = FValue(part.source, value, s)
-                else:
-                    part = s
-                parts[index] = part
-                break
-            else:
+
+            if not s:
                 del parts[index]
+                continue
+
+            if isinstance(part, str):
+                part = s
+            else:
+                value = part.value
+                if isinstance(value, str):
+                    value = getattr(value, method)(*args)
+                part = FValue(part.source, value, s)
+
+            parts[index] = part
+            break
+
+        # Strip the string itself.
         s = getattr(super(), method)(*args)
         return F(s, tuple(parts))
 
