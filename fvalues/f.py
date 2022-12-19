@@ -213,9 +213,17 @@ class F(str):
         return F(s, tuple(parts))
 
     def _add(self, other: str, is_left: bool) -> "F":
+        """
+        Concatenate with the other string.
+        is_left is True for self+other, False for other+self.
+        The result has two parts, one for each side.
+        If the source node can be detected and corresponds to `+` or `+=`
+        (as opposed to an implicit addition from something like `str.join`)
+        then sides that aren't string literals will produce an FValue.
+        """
         left, right = (self, other) if is_left else (other, self)
         value = str(left) + str(right)
-        frame = get_frame().f_back
+        frame = get_frame().f_back  # get_frame() corresponds to __[r]add__
         assert frame is not None
         ex = executing.Source.executing(frame)
 
@@ -224,6 +232,10 @@ class F(str):
             and len(ex.statements) == 1
             and isinstance(stmt := list(ex.statements)[0], ast.AugAssign)
         ):
+            # Before Python 3.11, `executing` doesn't currently set `.node`
+            # for `+=`. This is easy to workaround because we can just get the
+            # statement as long as there's only one, which is usually the case
+            # i.e. when there's no semicolons.
             node = stmt
         else:
             node = ex.node
@@ -241,6 +253,7 @@ class F(str):
             right_parts = F._parts_from_node(right_node, ex, right)
             parts = left_parts + right_parts
         else:
+            # Node couldn't be found or was unexpected type.
             parts = left, right
 
         return F(value, parts)
@@ -253,6 +266,9 @@ class F(str):
 
 
 def get_frame() -> FrameType:
+    """
+    Return the frame which is calling the function which is calling this.
+    """
     return inspect.currentframe().f_back.f_back  # type: ignore
 
 
@@ -262,11 +278,23 @@ def get_frame() -> FrameType:
 def compile_formatted_value(
     node: ast.FormattedValue, ex_source: executing.Source
 ) -> tuple[str, CodeType, CodeType]:
+    """
+    Returns three things that can be expensive to compute:
+    1. Source code corresponding to the node.
+    2. A compiled code object which can be evaluated to calculate the value.
+    3. Another code object which formats the value.
+    """
     source = get_node_source_text(node.value, ex_source)
     value_code = compile(source, "<fvalue1>", "eval")
     expr = ast.Expression(
         ast.JoinedStr(
             values=[
+                # Similar to the original FormattedValue node,
+                # but replace the actual expression with a simple variable lookup.
+                # Use @ in the variable name so that it can't possibly conflict
+                # with a normal variable.
+                # The value of this variable will be provided in the eval() call
+                # and will come from evaluating value_code above.
                 ast.FormattedValue(
                     value=ast.Name(id="@fvalue", ctx=ast.Load()),
                     conversion=node.conversion,
