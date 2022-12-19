@@ -204,3 +204,16 @@ def test_get_source_segment():
         "hello ",
         FValue(source="1 + (2)", value=3, formatted="3"),
     )
+
+
+def test_bad_source_segment():
+    s = F(
+        f"""
+        {1 + (2)}
+        """
+    ).strip()
+    [part] = s.parts
+    assert isinstance(part, FValue)
+    assert part.source in ("1 + (2)", "1 + 2")
+    assert part.value == 3
+    assert part.formatted == "3"
