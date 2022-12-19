@@ -310,6 +310,11 @@ def compile_formatted_value(
 
 @lru_cache
 def get_node_source_text(node: ast.AST, ex_source: executing.Source):
+    """
+    Returns some Python source code representing `node`:
+    preferably the actual original code given by `ast.get_source_segment`,
+    but falling back to `ast.unparse(node)` if the former is incorrect.
+    """
     source_unparsed = ast.unparse(node)
     source_segment = ast.get_source_segment(ex_source.text, node) or ""
     try:
