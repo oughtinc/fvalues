@@ -82,14 +82,13 @@ class F(str):
 
         assert isinstance(ex.node, ast.Call)
         [arg] = ex.node.args
-        return F(s, F._parts_from_node(arg, frame, s, ex.source))
+        return F(s, F._parts_from_node(arg, ex, s))
 
     @staticmethod
     def _parts_from_node(
         node: ast.expr,
-        frame: FrameType,
+        ex: executing.Executing,
         value: Optional[Part],
-        ex_source: executing.Source,
     ) -> Parts:
         if isinstance(node, ast.Constant):
             # Simple literal string part.
@@ -100,12 +99,13 @@ class F(str):
         elif isinstance(node, ast.JoinedStr):  # f-string
             parts: list[Part] = []
             for node in node.values:  # ast.Constant or ast.FormattedValue
-                parts.extend(F._parts_from_node(node, frame, None, ex_source))
+                parts.extend(F._parts_from_node(node, ex, None))
             return tuple(parts)
         elif isinstance(node, ast.FormattedValue):
             source, value_code, formatted_code = compile_formatted_value(
-                node, ex_source
+                node, ex.source
             )
+            frame = ex.frame
             value = eval(value_code, frame.f_globals, frame.f_locals)
             formatted = eval(
                 formatted_code, frame.f_globals, frame.f_locals | {"@fvalue": value}
@@ -114,7 +114,7 @@ class F(str):
             return (f_value,)
         else:
             assert isinstance(value, str)
-            f_value = FValue(get_node_source_text(node, ex_source), value, value)
+            f_value = FValue(get_node_source_text(node, ex.source), value, value)
             return (f_value,)
 
     def __deepcopy__(self, memodict=None):
@@ -187,8 +187,8 @@ class F(str):
             else:
                 left_node = node.left
                 right_node = node.right
-            left_parts = F._parts_from_node(left_node, frame, parts[0], ex.source)
-            right_parts = F._parts_from_node(right_node, frame, parts[1], ex.source)
+            left_parts = F._parts_from_node(left_node, ex, parts[0])
+            right_parts = F._parts_from_node(right_node, ex, parts[1])
             parts = left_parts + right_parts
 
         return F(value, parts)
