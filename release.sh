@@ -20,7 +20,7 @@ if [[ ! ${1} =~ ^([0-9]+)(\.[0-9]+)?(\.[0-9]+)?$ ]]; then
     exit 1
 fi
 
-npm --prefix ui run build
+tox -p auto
 
 export TAG="v${1}"
 git tag "${TAG}"
