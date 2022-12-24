@@ -126,8 +126,6 @@ class F(str):
             f_value = FValue(source, value, formatted)
             return (f_value,)
         else:
-            # Part of a concatenation.
-            assert isinstance(node.parent, (ast.BinOp, ast.AugAssign))  # type: ignore
             assert isinstance(value, str)
             f_value = FValue(get_node_source_text(node, ex.source), value, value)
             return (f_value,)

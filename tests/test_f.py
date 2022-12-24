@@ -223,3 +223,17 @@ def test_bad_source_segment():
     assert part.source in ("1 + (2)", "1 + 2")
     assert part.value == 3
     assert part.formatted == "3"
+
+
+def test_other_node_type_call_arg():
+    s = "foo"
+    s = F(F(s))
+    assert s == "foo"
+    (part,) = s.parts
+    assert part == FValue(source="F(s)", value="foo", formatted="foo")
+    assert isinstance(part, FValue)  # for mypy
+    assert (
+        part.value.parts
+        == s.flatten().parts
+        == (FValue(source="s", value="foo", formatted="foo"),)
+    )
