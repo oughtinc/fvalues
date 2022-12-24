@@ -237,3 +237,45 @@ def test_other_node_type_call_arg():
         == s.flatten().parts
         == (FValue(source="s", value="foo", formatted="foo"),)
     )
+
+
+def test_join():
+    strings = (x for x in ["a", "b", "c"])
+    s = F(" ").join(strings)
+    assert s == "a b c"
+    assert s.parts == (
+        FValue(source="list(strings)[0]", value="a", formatted="a"),
+        FValue(source='F(" ")', value=" ", formatted=" "),
+        FValue(source="list(strings)[1]", value="b", formatted="b"),
+        FValue(source='F(" ")', value=" ", formatted=" "),
+        FValue(source="list(strings)[2]", value="c", formatted="c"),
+    )
+    assert s.flatten().parts == (
+        FValue(source="list(strings)[0]", value="a", formatted="a"),
+        " ",
+        FValue(source="list(strings)[1]", value="b", formatted="b"),
+        " ",
+        FValue(source="list(strings)[2]", value="c", formatted="c"),
+    )
+
+
+def test_join_empty_separator():
+    strings = ["a", "b", "c"]
+    s = F("").join(strings)
+    assert s == "abc"
+    assert (
+        s.parts
+        == s.flatten().parts
+        == (
+            FValue(source="(strings)[0]", value="a", formatted="a"),
+            FValue(source="(strings)[1]", value="b", formatted="b"),
+            FValue(source="(strings)[2]", value="c", formatted="c"),
+        )
+    )
+
+
+def test_join_bad_source():
+    strings = ["a", "b", "c"]
+    s = F.join(F(","), strings)
+    assert s == "a,b,c"
+    assert s.parts == s.flatten().parts == ("a", ",", "b", ",", "c")

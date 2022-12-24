@@ -1,6 +1,7 @@
 import ast
 import inspect
 import warnings
+from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import lru_cache
@@ -260,6 +261,45 @@ class F(str):
 
     def __radd__(self, other: str) -> "F":
         return self._add(other, False)
+
+    def join(self, iterable: Iterable[str]) -> "F":
+        parts: list[Part] = []
+        to_list = not isinstance(iterable, (list, tuple))
+        if to_list:
+            iterable = list(iterable)
+        ex = executing.Source.executing(get_frame())
+        iterable_source = None
+        separator_source = None
+        if (
+            ex.node
+            and isinstance(ex.node, ast.Call)
+            and isinstance(ex.node.func, ast.Attribute)
+            and ex.node.func.attr == "join"
+            and len(ex.node.args) == 1
+        ):
+            [iterable_node] = ex.node.args
+            iterable_source = get_node_source_text(iterable_node, ex.source)
+            iterable_source = f"({iterable_source})"
+            if to_list:
+                iterable_source = f"list{iterable_source}"
+
+            if self:
+                separator_node = ex.node.func.value
+                separator_source = get_node_source_text(separator_node, ex.source)
+
+        for i, item in enumerate(iterable):
+            assert isinstance(item, str)
+            if i and self:
+                if separator_source:
+                    parts.append(FValue(separator_source, self, str(self)))
+                else:
+                    parts.append(self)
+
+            if iterable_source:
+                parts.append(FValue(f"{iterable_source}[{i}]", item, str(item)))
+            else:
+                parts.append(item)
+        return F(str(self).join(map(str, iterable)), tuple(parts))
 
 
 def get_frame() -> FrameType:
