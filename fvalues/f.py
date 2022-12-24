@@ -283,13 +283,12 @@ class F(str):
             if to_list:
                 iterable_source = f"list{iterable_source}"
 
-            if self:
-                separator_node = ex.node.func.value
-                separator_source = get_node_source_text(separator_node, ex.source)
+            separator_node = ex.node.func.value
+            separator_source = get_node_source_text(separator_node, ex.source)
 
         for i, item in enumerate(iterable):
             assert isinstance(item, str)
-            if i and self:
+            if i:
                 if separator_source:
                     parts.append(FValue(separator_source, self, str(self)))
                 else:

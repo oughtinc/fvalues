@@ -239,7 +239,7 @@ def test_other_node_type_call_arg():
     )
 
 
-def test_join():
+def test_join_non_list():
     strings = (x for x in ["a", "b", "c"])
     s = F(" ").join(strings)
     assert s == "a b c"
@@ -259,18 +259,23 @@ def test_join():
     )
 
 
-def test_join_empty_separator():
+def test_join_list():
     strings = ["a", "b", "c"]
     s = F("").join(strings)
     assert s == "abc"
-    assert (
-        s.parts
-        == s.flatten().parts
-        == (
-            FValue(source="(strings)[0]", value="a", formatted="a"),
-            FValue(source="(strings)[1]", value="b", formatted="b"),
-            FValue(source="(strings)[2]", value="c", formatted="c"),
-        )
+    assert s.parts == (
+        FValue(source="(strings)[0]", value="a", formatted="a"),
+        FValue(source='F("")', value="", formatted=""),
+        FValue(source="(strings)[1]", value="b", formatted="b"),
+        FValue(source='F("")', value="", formatted=""),
+        FValue(source="(strings)[2]", value="c", formatted="c"),
+    )
+    assert s.flatten().parts == (
+        FValue(source="(strings)[0]", value="a", formatted="a"),
+        "",
+        FValue(source="(strings)[1]", value="b", formatted="b"),
+        "",
+        FValue(source="(strings)[2]", value="c", formatted="c"),
     )
 
 
