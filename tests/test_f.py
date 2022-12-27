@@ -223,3 +223,64 @@ def test_bad_source_segment():
     assert part.source in ("1 + (2)", "1 + 2")
     assert part.value == 3
     assert part.formatted == "3"
+
+
+def test_other_node_type_call_arg():
+    s = "foo"
+    s = F(F(s))
+    assert s == "foo"
+    (part,) = s.parts
+    assert part == FValue(source="F(s)", value="foo", formatted="foo")
+    assert isinstance(part, FValue)  # for mypy
+    assert (
+        part.value.parts
+        == s.flatten().parts
+        == (FValue(source="s", value="foo", formatted="foo"),)
+    )
+
+
+def test_join_non_list():
+    strings = (x for x in ["a", "b", "c"])
+    s = F(" ").join(strings)
+    assert s == "a b c"
+    assert s.parts == (
+        FValue(source="list(strings)[0]", value="a", formatted="a"),
+        FValue(source='F(" ")', value=" ", formatted=" "),
+        FValue(source="list(strings)[1]", value="b", formatted="b"),
+        FValue(source='F(" ")', value=" ", formatted=" "),
+        FValue(source="list(strings)[2]", value="c", formatted="c"),
+    )
+    assert s.flatten().parts == (
+        FValue(source="list(strings)[0]", value="a", formatted="a"),
+        " ",
+        FValue(source="list(strings)[1]", value="b", formatted="b"),
+        " ",
+        FValue(source="list(strings)[2]", value="c", formatted="c"),
+    )
+
+
+def test_join_list():
+    strings = ["a", "b", "c"]
+    s = F("").join(strings)
+    assert s == "abc"
+    assert s.parts == (
+        FValue(source="(strings)[0]", value="a", formatted="a"),
+        FValue(source='F("")', value="", formatted=""),
+        FValue(source="(strings)[1]", value="b", formatted="b"),
+        FValue(source='F("")', value="", formatted=""),
+        FValue(source="(strings)[2]", value="c", formatted="c"),
+    )
+    assert s.flatten().parts == (
+        FValue(source="(strings)[0]", value="a", formatted="a"),
+        "",
+        FValue(source="(strings)[1]", value="b", formatted="b"),
+        "",
+        FValue(source="(strings)[2]", value="c", formatted="c"),
+    )
+
+
+def test_join_bad_source():
+    strings = ["a", "b", "c"]
+    s = F.join(F(","), strings)
+    assert s == "a,b,c"
+    assert s.parts == s.flatten().parts == ("a", ",", "b", ",", "c")
