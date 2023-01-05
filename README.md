@@ -21,6 +21,12 @@ Key facts:
 - `FValue.source` contains the source code between the braces (`{}`) but before the colon (`:`) and format spec (`.2f`). In some cases it may not be the exact original source code, but equivalent code produced by `ast.unparse`.
 - `FValue.value` and `FValue.formatted` are calculated using `eval()`, so **be careful of expressions that you wouldn't want to evaluate twice due to performance or side effects**.
 
+## Usage in ICE
+
+This library was built to enhance the [Interactive Composition Explorer (ICE)](https://github.com/oughtinc/ice). In the screenshot below, the prompt under 'Inputs' on the right is an `F` object, and the colored text corresponds to dynamic `FValue`s.
+
+![ICE screenshot](./ICE.jpeg)
+
 ## Concatenation
 
 The `F` class also has special support for concatenation with the `+` operator:
