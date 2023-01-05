@@ -21,6 +21,12 @@ Key facts:
 - `FValue.source` contains the source code between the braces (`{}`) but before the colon (`:`) and format spec (`.2f`). In some cases it may not be the exact original source code, but equivalent code produced by `ast.unparse`.
 - `FValue.value` and `FValue.formatted` are calculated using `eval()`, so **be careful of expressions that you wouldn't want to evaluate twice due to performance or side effects**.
 
+## Usage in ICE
+
+This library was built to enhance the [Interactive Composition Explorer (ICE)](https://github.com/oughtinc/ice). In the screenshot below, the prompt under 'Inputs' on the right is an `F` object, and the colored text corresponds to dynamic `FValue`s.
+
+![ICE screenshot](./ICE.jpeg)
+
 ## Concatenation
 
 The `F` class also has special support for concatenation with the `+` operator:
@@ -58,6 +64,14 @@ assert f.flatten().parts == (
 
 ## Other string methods
 
-Another method that's specially implemented for `F` is `.strip()` and its cousins `lstrip` and `rstrip`. It does the same thing as the usual `str.strip` as far as the whole string is concerned, but also strips the internal parts in the way you'd probably expect. See the docstring for more details.
+Most `F` methods (e.g. `.lower()`) are directly inherited from `str`, which means that they return a plain `str` rather than another `F` object. So be careful with those methods if you don't want to lose information about the parts! The methods below have specialised implementations to avoid this. More may be added in the future.
 
-All other methods are directly inherited from `str`, which means that methods such as `.lower()` will return a plain `str` rather than another `F` object. So be careful with those methods if you don't want to lose information about the parts! More specialised implementations may be added in the future.
+### `strip`
+
+`F.strip` does the same thing as the usual `str.strip` as far as the whole string is concerned, but also strips the internal parts in the way you'd probably expect. See the docstring for more details. The related methods `lstrip` and `rstrip` strip the left/right sides as expected.
+
+Make sure to write `F(f"...").strip()` rather than `F(f"...".strip())` or the f-string magic won't work.
+
+### `join`
+
+`separator.join(strings)` will return an `F` object only if `separator` is an `F` object. If `separator` is a plain `str`, then the result will be a plain `str`, even if `strings` is a list of `F` objects. In practice, this typically means you should write e.g. `F(" ").join(strings)` rather than `" ".join(strings)`.
