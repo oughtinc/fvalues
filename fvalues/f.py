@@ -88,6 +88,10 @@ class F(str):
             return F(s, (s,))
 
         assert isinstance(ex.node, ast.Call)
+
+        if len(ex.node.args) > 1:
+            return F(s, (s,))  # possible deserialization call
+
         [arg] = ex.node.args
         return F(s, F._parts_from_node(arg, ex, s))
 

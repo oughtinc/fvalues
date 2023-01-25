@@ -1,5 +1,7 @@
 import time
 from copy import deepcopy
+from typing import Any
+from typing import Dict
 
 import pytest
 
@@ -284,3 +286,18 @@ def test_join_bad_source():
     s = F.join(F(","), strings)
     assert s == "a,b,c"
     assert s.parts == s.flatten().parts == ("a", ",", "b", ",", "c")
+
+
+def test_deserialization():
+    # pyyaml deserialization reconstructs F with multiple arguments:
+    # https://github.com/yaml/pyyaml/blob/957ae4d/lib/yaml/constructor.py#L591
+    # make sure that there is no error resulting from this
+    cls = F
+    args = ["test_str"]
+    kwds: Dict[str, Any] = {}
+    # copied straight from pyyaml, so ignore mypy complaints
+    new_f = cls.__new__(cls, *args, **kwds)  # type: ignore
+    # during deserialization, the state of the object will be updated after
+    # construction anyways, so there's no need to check for anything other than
+    # successful object creation
+    assert new_f == "test_str"
