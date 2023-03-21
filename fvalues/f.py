@@ -303,10 +303,10 @@ class F(str):
             else:
                 parts.append(item)
         return F(str(self).join(map(str, iterable)), tuple(parts))
-    
+
     def preserved_join(self, iterable: Iterable[str]) -> "F":
         """Join strings while preserving regular strings.
-        
+
         Normally, joined strings will all become FValues. However, sometimes we want
         to preserve them as regular strings instead of FValues. This function allows
         for that option.
@@ -330,7 +330,6 @@ class F(str):
             parts.pop()
 
         return F(joined, parts=tuple(parts))
-
 
 
 def get_frame() -> FrameType:
