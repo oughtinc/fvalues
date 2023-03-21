@@ -300,8 +300,7 @@ def test_preserved_join_list():
     assert s.parts == (
         "a",
         " ",
-        "b=",
-        FValue(source="b", value=2, formatted="2"),
+        F(f"b={b}", parts=("b=", FValue(source="b", value=2, formatted="2"))),
         " ",
         "c",
     )
@@ -321,8 +320,7 @@ def test_preserved_join_empty_string():
     assert s == "ab=2c"
     assert s.parts == (
         "a",
-        "b=",
-        FValue(source="b", value=2, formatted="2"),
+        F(f"b={b}", parts=("b=", FValue(source="b", value=2, formatted="2"))),
         "c",
     )
     assert s.flatten().parts == (

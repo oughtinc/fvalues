@@ -315,10 +315,7 @@ class F(str):
         parts = []
         for substring in iterable:
             joined += substring
-            if isinstance(substring, F):
-                parts.extend(list(substring.parts))
-            else:  # regular string, keep as such
-                parts.append(substring)
+            parts.append(substring)
 
             # avoid polluting parts when joining with empty string
             if str(self) != "":
