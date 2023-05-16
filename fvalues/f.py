@@ -304,6 +304,30 @@ class F(str):
                 parts.append(item)
         return F(str(self).join(map(str, iterable)), tuple(parts))
 
+    def preserved_join(self, iterable: Iterable[str]) -> "F":
+        """Join strings while preserving regular strings.
+
+        Normally, joined strings will all become FValues. However, sometimes we want
+        to preserve them as regular strings instead of FValues. This function allows
+        for that option.
+        """
+        joined = ""
+        parts = []
+        for substring in iterable:
+            joined += substring
+            parts.append(substring)
+
+            # avoid polluting parts when joining with empty string
+            if str(self) != "":
+                joined += self
+                parts.append(self)
+
+        if len(parts) > 0 and str(self) != "":  # pop the last joiner
+            joined = joined[: -len(self)]
+            parts.pop()
+
+        return F(joined, parts=tuple(parts))
+
 
 def get_frame() -> FrameType:
     """

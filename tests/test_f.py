@@ -288,6 +288,49 @@ def test_join_bad_source():
     assert s.parts == s.flatten().parts == ("a", ",", "b", ",", "c")
 
 
+def test_preserved_join_empty():
+    s = F(" ").preserved_join([])
+    assert s == F("", parts=("",))
+
+
+def test_preserved_join_list():
+    b = 2
+    s = F(" ").preserved_join(["a", F(f"b={b}"), "c"])
+    assert s == "a b=2 c"
+    assert s.parts == (
+        "a",
+        " ",
+        F(f"b={b}", parts=("b=", FValue(source="b", value=2, formatted="2"))),
+        " ",
+        "c",
+    )
+    assert s.flatten().parts == (
+        "a",
+        " ",
+        "b=",
+        FValue(source="b", value=2, formatted="2"),
+        " ",
+        "c",
+    )
+
+
+def test_preserved_join_empty_string():
+    b = 2
+    s = F("").preserved_join(["a", F(f"b={b}"), "c"])
+    assert s == "ab=2c"
+    assert s.parts == (
+        "a",
+        F(f"b={b}", parts=("b=", FValue(source="b", value=2, formatted="2"))),
+        "c",
+    )
+    assert s.flatten().parts == (
+        "a",
+        "b=",
+        FValue(source="b", value=2, formatted="2"),
+        "c",
+    )
+
+
 def test_deserialization():
     # pyyaml deserialization reconstructs F with multiple arguments:
     # https://github.com/yaml/pyyaml/blob/957ae4d/lib/yaml/constructor.py#L591
