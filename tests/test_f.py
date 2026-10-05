@@ -213,11 +213,9 @@ def test_get_source_segment():
 
 
 def test_bad_source_segment():
-    s = F(
-        f"""
+    s = F(f"""
         {1 + (2)}
-        """
-    ).strip()
+        """).strip()
     [part] = s.parts
     assert isinstance(part, FValue)
     # Depending on Python version, ast.get_source_segment may be wrong,
